@@ -1,0 +1,9 @@
+{
+  "pluginId": "neodex.ciel",
+  "repo": "NDesumeur/neodex-plugin-ciel",
+  "version": "1.0.0",
+  "sha256": "982514d6075d617a7931e1178d47d39e684ea12d824f3473ad301e88c3f575b0",
+  "approvedAt": "2026-11-13T23:16:59.003Z",
+  "neobase": ">=4.0.0",
+  "signature": "Rms68cKcWkAKaaDRdivZNvgdB0JKZ4dL0IIutGI7NX1oGtPybS4Skf8irp/KAdIBhB1IQAEphXiaCIQQpim+BQ=="
+}
