@@ -1,0 +1,25 @@
+{
+  "id": "neodex.ciel",
+  "name": "Ciel ce soir",
+  "version": "1.0.0",
+  "author": "NDesumeur",
+  "description": "Les planètes visibles cette nuit depuis ta ville, avec l'heure où elles sont au plus haut et leur direction ; la carte du ciel heure par heure en pixel art (étoiles brillantes, constellations, Lune et sa phase) ; et les prochains passages visibles de la Station spatiale internationale. Calculé sur ton PC, seule l'orbite de l'ISS vient d'Internet (CelesTrak).",
+  "icon": "icon.png",
+  "entry": "index.js",
+  "view": "ciel",
+  "neobase": ">=4.0.0",
+  "type": "app",
+  "category": "Outils",
+  "compatibility": ["windows", "linux"],
+  "syncMode": "fusion",
+  "syncInfo": "Ta ville suit ton compte.",
+  "mobile": false,
+  "system": false,
+  "dependencies": {},
+  "sdk": "2.1.0",
+  "permissions": [
+    "storage",
+    "network:celestrak.org",
+    "network:geocoding-api.open-meteo.com"
+  ]
+}
