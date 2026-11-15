@@ -9,3 +9,9 @@ What to see in the sky tonight from your city.
 - **ISS passes** over the next three nights (times within a few minutes).
 
 Choose your city with the **City** button (Paris at first). Only the ISS orbit (celestrak.org) and the city lookup (open-meteo.com) come from the Internet.
+
+## Info cards (1.1.0)
+
+Click a planet, the Moon, the ISS, a bright star or a constellation (26 have a card) to open its card: what it is, what to look for, and where it is at the chosen time. The object is framed in the view.
+
+The Tonight column puts the best sight first (the Moon, a bright planet, a fine ISS pass), one short line per object. Click a line to jump to that time and turn toward it.

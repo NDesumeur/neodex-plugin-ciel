@@ -29,3 +29,9 @@ Les étoiles et le tracé des constellations viennent de **d3-celestial** d’Ol
 ## Installer
 
 Dans NeoDex : **NeoStore → À découvrir → Ciel ce soir → Installer**.
+
+## La fiche (1.1.0)
+
+Un clic sur une planète, la Lune, l’ISS, une étoile brillante ou une constellation (26 ont une fiche) ouvre sa fiche : ce que c’est, ce qu’on y voit, et où elle est à l’heure choisie. L’objet est encadré dans la vue.
+
+La colonne « Cette nuit » met en premier le plus beau à voir (la Lune, une planète brillante, un beau passage de l’ISS), avec une ligne courte par astre. Un clic sur une ligne avance l’heure et tourne la vue vers l’astre.

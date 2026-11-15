@@ -6,9 +6,10 @@ const HTML = `<div class="appWrap wide">
   <div class="gMain"><div class="gameBox"><canvas id="ciCanvas" width="320" height="180" role="img" aria-label="Le ciel vu de dehors"></canvas>
       <div class="row ciTime"><input type="range" id="ciT" min="0" max="1000" value="0"><button class="btn" id="ciLeft" aria-label="Tourner à gauche">◀</button><button class="btn" id="ciRight" aria-label="Tourner à droite">▶</button><button class="btn main" id="ciLines">CONSTELLATIONS</button><button class="btn" id="ciNow">MAINTENANT</button><button class="btn" id="ciCity">VILLE</button></div></div>
     <div class="gSide">
+      <div class="sysCard ciInfo" id="ciInfo" hidden><b id="ciInfoT"></b><div class="ciList" id="ciInfoB"></div><button class="btn" id="ciInfoX" aria-label="Fermer la fiche">FERMER</button></div>
       <div class="sysCard"><b>CETTE NUIT</b><div class="ciList" id="ciPlanets"></div></div>
       <div class="sysCard"><b>PASSAGES DE L'ISS</b><div class="ciList" id="ciIss"></div></div>
-      <div class="hint">Le ciel comme si tu sortais : fais glisser la vue (ou ◀ ▶ et les flèches du clavier) pour tourner et lever les yeux. Le curseur avance l'heure dans la nuit ; le bouton VILLE choisit d'où tu regardes.</div>
+      <div class="hint">Fais glisser la vue (ou ◀ ▶ et les flèches) pour tourner et lever les yeux, le curseur pour avancer dans la nuit. Clique sur un astre, une étoile ou une constellation pour sa fiche.</div>
     </div></div>
 </div>`;
 const CSS = `.gMain{display:flex;gap:22px;align-items:flex-start;flex-wrap:wrap}
@@ -19,7 +20,10 @@ const CSS = `.gMain{display:flex;gap:22px;align-items:flex-start;flex-wrap:wrap}
 .gSide{display:flex;flex-direction:column;gap:14px;flex:1;min-width:280px;max-width:460px}
 .gSide .sysCard{display:flex;flex-direction:column;gap:8px}
 .ciList{display:flex;flex-direction:column;gap:6px;line-height:1.5}
-.ciList b{color:var(--acc,#ffd84a)}`;
+.ciList b{color:var(--acc,#ffd84a)}
+.ciInfo[hidden]{display:none}.ciInfo{box-shadow:0 0 0 2px #ffd84a}.ciInfo .btn{align-self:flex-end}
+.ciItem{cursor:pointer;padding:3px 6px;margin:0 -6px}.ciItem:hover,.ciItem:focus-visible{background:rgba(138,176,255,.14);outline:none}
+.ciItem.top{background:rgba(255,216,74,.1);box-shadow:inset 3px 0 0 #ffd84a;padding:6px 8px}.ciTop{color:#ffd84a;font-size:.85em;letter-spacing:1px}`;
 const RAD = Math.PI / 180, DEG = 180 / Math.PI;
 const rev = x => ((x % 360) + 360) % 360;
 const jd = ms => ms / 86400000 + 2440587.5;
@@ -65,6 +69,46 @@ function altAz(ra, dec, ms, lat, lon) {
 }
 const CI_DIR = ['nord', 'nord-est', 'est', 'sud-est', 'sud', 'sud-ouest', 'ouest', 'nord-ouest'];
 const dir = az => CI_DIR[Math.round(rev(az) / 45) % 8];
+// les constellations qui ont une fiche : nom, centre (heures, degrés), ce qu'on y voit, leurs étoiles de la liste ci-dessous
+// shortcut: 26 constellations sur 88, un clic loin de leur centre ne donne pas de fiche ; en ajouter ici si on veut toutes les nommer
+const CI_CONST = [
+  ['Orion', 5.6, 5, 'Le chasseur, reine des nuits d’hiver : trois étoiles alignées font sa ceinture, Bételgeuse (rouge) et Rigel (bleue) ses épaules et son pied.', 'Bételgeuse Rigel Bellatrix Alnilam Alnitak Mintaka Saïph'],
+  ['Grande Ourse', 11.3, 56, 'La Grande Casserole, visible toute l’année. Prolonge cinq fois l’écart entre Merak et Dubhe : tu tombes sur l’étoile Polaire.', 'Dubhe Merak Phecda Megrez Alioth Mizar Alkaïd'],
+  ['Petite Ourse', 15, 77, 'Une petite casserole pâle ; au bout du manche, l’étoile Polaire montre le nord.', 'Polaire Kochab'],
+  ['Cassiopée', 1, 62, 'Un W (ou un M) bien net, de l’autre côté de la Polaire par rapport à la Grande Ourse.', 'Schédar Caph Gamma_Cas Ruchbah Ségin'],
+  ['Cygne', 20.6, 42, 'La Croix du Nord, posée sur la Voie lactée. Deneb, sa queue, forme le Triangle d’été avec Véga et Altaïr.', 'Deneb Sadr Gienah Delta_Cyg Albireo'],
+  ['Lyre', 18.8, 36, 'Petite, mais Véga est l’une des étoiles les plus brillantes du ciel, très haut les soirs d’été.', 'Véga'],
+  ['Aigle', 19.7, 3, 'Altaïr, entourée de deux étoiles plus faibles, est le troisième sommet du Triangle d’été.', 'Altaïr'],
+  ['Taureau', 4.5, 16, 'Aldébaran est son œil rouge ; les Pléiades, un petit nuage d’étoiles, sont sur son dos.', 'Aldébaran Elnath Pléiades'],
+  ['Gémeaux', 7.1, 23, 'Les jumeaux Castor et Pollux, deux étoiles côte à côte au-dessus d’Orion en hiver.', 'Castor Pollux Alhena'],
+  ['Lion', 10.7, 15, 'Un point d’interrogation à l’envers (la Faucille) qui finit sur Régulus : le lion du printemps.', 'Régulus Dénébola'],
+  ['Scorpion', 16.9, -30, 'Bas au sud les soirs d’été en France ; Antarès, son cœur rouge, rivalise avec Mars.', 'Antarès'],
+  ['Bouvier', 14.7, 30, 'Un cerf-volant ; Arcturus, orangée, se trouve en prolongeant la courbe du manche de la Grande Ourse.', 'Arcturus'],
+  ['Persée', 3.3, 45, 'Le héros qui porte la tête de Méduse : Algol, son œil, faiblit tous les trois jours.', 'Mirfak Algol'],
+  ['Pégase', 22.7, 20, 'Le Grand Carré d’automne, quatre étoiles qui dessinent un grand carré presque vide.', ''],
+  ['Andromède', .8, 38, 'Une chaîne d’étoiles partant du Carré de Pégase ; la galaxie d’Andromède s’y voit à l’œil nu loin des villes.', 'Alphératz'],
+  ['Grand Chien', 6.8, -22, 'Sirius, l’étoile la plus brillante du ciel, au sud les soirs d’hiver, sous Orion.', 'Sirius'],
+  ['Petit Chien', 7.6, 6, 'Deux étoiles seulement, dont Procyon, sommet du Triangle d’hiver avec Sirius et Bételgeuse.', 'Procyon'],
+  ['Vierge', 13.4, -4, 'Grande et pâle ; Spica, bleutée, brille au sud au printemps.', 'Spica'],
+  ['Cocher', 5.5, 42, 'Un pentagone autour de Capella, jaune et très brillante, haut en hiver.', 'Capella'],
+  ['Sagittaire', 19, -28, 'La Théière, bas au sud en été ; derrière elle se cache le centre de notre Galaxie.', ''],
+  ['Ophiuchus', 17.3, -8, 'Le porteur de serpent, grand et discret, entre Hercule et le Scorpion.', 'Rasalhague'],
+  ['Bélier', 2.6, 20, 'Trois étoiles en crochet ; Hamal est la plus brillante.', 'Hamal'],
+  ['Poisson austral', 22.3, -31, 'Fomalhaut, seule étoile brillante tout en bas du ciel d’automne.', 'Fomalhaut'],
+  ['Hydre', 9.6, -8, 'La plus longue constellation ; Alphard, « la solitaire », brille seule dans un coin vide.', 'Alphard'],
+  ['Hercule', 17.2, 30, 'Un trapèze (la Clé de voûte) ; aux jumelles, l’amas M13 fait une petite boule floue.', ''],
+  ['Dragon', 17.5, 62, 'Il serpente entre les deux Ourses ; sa tête est un petit losange près de Véga.', ''],
+].map(([name, ra, dec, text, stars]) => ({ name, ra: ra * 15, dec, text, stars: stars ? stars.split(' ').map(s => s.replace('_', ' ')) : [] }));
+const CI_FACT = { Sirius: 'L’étoile la plus brillante du ciel, à 8,6 années-lumière.', Arcturus: 'Une géante orange à 37 années-lumière.', Véga: 'Blanche, à 25 années-lumière ; dans 12 000 ans, elle sera notre étoile polaire.',
+  Capella: 'En fait quatre étoiles, à 43 années-lumière.', Rigel: 'Une supergéante bleue à 860 années-lumière.', Procyon: 'Une voisine, à 11 années-lumière.', Bételgeuse: 'Une supergéante rouge à 550 années-lumière, plus grosse que l’orbite de Mars.',
+  Altaïr: 'À 17 années-lumière ; elle tourne sur elle-même en 9 heures.', Aldébaran: 'Une géante orange à 65 années-lumière.', Antarès: 'Une supergéante rouge à 550 années-lumière ; son nom veut dire « rivale de Mars ».',
+  Spica: 'Deux étoiles bleues qui tournent l’une autour de l’autre en 4 jours.', Pollux: 'Une géante orange à 34 années-lumière.', Fomalhaut: 'À 25 années-lumière, entourée d’un anneau de poussière.',
+  Deneb: 'À plus de 2 000 années-lumière : l’une des étoiles les plus lumineuses connues.', Régulus: 'Le cœur du Lion, à 79 années-lumière.', Castor: 'Six étoiles en une, à 51 années-lumière.',
+  Polaire: 'Elle reste presque immobile, juste au-dessus du nord : les autres étoiles tournent autour d’elle.', Mizar: 'Avec sa petite voisine Alcor : la voir, c’est un test de bonne vue.',
+  Algol: 'Une étoile double qui s’éclipse : elle faiblit pendant quelques heures tous les 2,9 jours.', Pléiades: 'Un amas d’étoiles jeunes à 440 années-lumière : 6 ou 7 à l’œil nu, des dizaines aux jumelles.',
+  Albireo: 'Aux jumelles ou à la lunette : une étoile dorée et une bleue, côte à côte.' };
+const constOf = name => CI_CONST.find(c => c.stars.includes(name));
+const angDist = (ra1, d1, ra2, d2) => Math.acos(Math.max(-1, Math.min(1, Math.sin(d1 * RAD) * Math.sin(d2 * RAD) + Math.cos(d1 * RAD) * Math.cos(d2 * RAD) * Math.cos((ra1 - ra2) * RAD)))) * DEG;
 // les étoiles brillantes (ascension droite en heures, déclinaison, magnitude) et quelques constellations
 const CI_STARS = `Sirius 6.752 -16.716 -1.46|Arcturus 14.261 19.182 -.05|Véga 18.616 38.784 .03|Capella 5.278 45.998 .08|Rigel 5.242 -8.202 .13|Procyon 7.655 5.225 .34|Bételgeuse 5.919 7.407 .5|Altaïr 19.846 8.868 .77|Aldébaran 4.599 16.509 .85|Antarès 16.49 -26.432 1|Spica 13.42 -11.161 1.04|Pollux 7.755 28.026 1.14|Fomalhaut 22.961 -29.622 1.16|Deneb 20.69 45.28 1.25|Régulus 10.14 11.967 1.35|Castor 7.577 31.888 1.58|Bellatrix 5.419 6.35 1.64|Alnilam 5.604 -1.202 1.69|Alnitak 5.679 -1.943 1.74|Mintaka 5.533 -.299 2.23|Saïph 5.796 -9.67 2.06|Polaire 2.53 89.264 1.98|Dubhe 11.062 61.751 1.79|Merak 11.031 56.382 2.37|Phecda 11.897 53.695 2.44|Megrez 12.257 57.033 3.31|Alioth 12.9 55.96 1.77|Mizar 13.399 54.925 2.27|Alkaïd 13.792 49.313 1.86|Schédar .675 56.537 2.24|Caph .153 59.15 2.28|Gamma Cas .945 60.717 2.47|Ruchbah 1.43 60.235 2.68|Ségin 1.907 63.67 3.37|Sadr 20.37 40.257 2.23|Gienah 20.77 33.97 2.48|Delta Cyg 19.75 45.131 2.87|Albireo 19.512 27.96 3.08|Mirfak 3.405 49.861 1.79|Alphératz .14 29.09 2.06|Hamal 2.12 23.462 2|Algol 3.136 40.956 2.1|Dénébola 11.818 14.572 2.14|Alphard 9.46 -8.659 1.98|Elnath 5.438 28.608 1.65|Alhena 6.629 16.399 1.93|Pléiades 3.791 24.105 1.6|Kochab 14.845 74.156 2.08|Rasalhague 17.582 12.56 2.08`
   .split('|').map(s => { const p = s.split(' '), mag = +p.pop(), dec = +p.pop(), ra = +p.pop() * 15; return { name: p.join(' '), ra, dec, mag }; });
@@ -430,18 +474,34 @@ export default async function (ctx) {
     return out;
   }
   function moonText(m) { const q = bodies(m).Lune, illum = Math.round((1 - Math.cos(q.elong * RAD)) / 2 * 100); return illum > 97 ? 'pleine Lune' : illum < 3 ? 'nouvelle Lune' : (q.waxing ? 'croissante' : 'décroissante') + ', éclairée à ' + illum + ' %'; }
+  const BEAUTY = { Lune: 6, Vénus: 5, Jupiter: 4, Saturne: 3, Mars: 3, Mercure: 1 };
+  const illumOf = m => (1 - Math.cos(bodies(m).Lune.elong * RAD)) / 2;
+  function tonight() {  // ce qu'il y a à voir, le plus beau d'abord : l'éclat de l'astre, puis sa hauteur ; une Lune presque nouvelle ne compte pas
+    const list = planetsTonight().map(p => ({ ...p, kind: 'body', score: BEAUTY[p.name] + p.best.alt / 30 - (p.name === 'Lune' && illumOf(p.best.m) < .1 ? 6 : 0) }));
+    const pass = passes.filter(q => q.start < win[1] && q.end > win[0] && q.max > 40).sort((a, c) => c.max - a.max)[0];  // un beau passage de l'ISS cette nuit
+    if (pass) list.push({ name: 'ISS', kind: 'iss', first: pass.start, last: pass.end, best: { m: (pass.start + pass.end) / 2, alt: pass.max, az: issLook(iss, (pass.start + pass.end) / 2, lat, lon).az }, pass, score: 4.5 });
+    return list.sort((a, c) => c.score - a.score);
+  }
   function renderList() {
-    const list = planetsTonight(), box = $('ciPlanets');
-    box.replaceChildren(el('div', 'hint', 'Nuit du ' + dayOf(win[0]) + ' : le soleil se couche à ' + hm(win[0]) + ' et se lève à ' + hm(win[1]) + '.'));
-    for (const p of list) { const d = el('div'); d.append(el('b', '', p.name + ' '), p.name === 'Lune' ? moonText(p.best.m) + ', de ' + hm(p.first) + ' à ' + hm(p.last) + ', au plus haut vers ' + hm(p.best.m) + ' (' + Math.round(p.best.alt) + '°, ' + dir(p.best.az) + ').'
-      : 'de ' + hm(p.first) + ' à ' + hm(p.last) + ', au plus haut vers ' + hm(p.best.m) + ' (' + Math.round(p.best.alt) + '° au-dessus de l’horizon, ' + dir(p.best.az) + ') : ' + CI_LOOK[p.name][1] + '.'); box.append(d); }
+    const list = tonight(), box = $('ciPlanets');
+    box.replaceChildren(el('div', 'hint', 'Nuit du ' + dayOf(win[0]) + ' · ' + hm(win[0]) + ' → ' + hm(win[1])));
+    list.forEach((p, i) => {
+      const d = el('div', 'ciItem' + (i ? '' : ' top')); d.tabIndex = 0; d.setAttribute('role', 'button');
+      if (!i) d.append(el('div', 'ciTop', 'À VOIR EN PREMIER'));
+      const when = p.kind === 'iss' ? 'passe à ' + hm(p.first) + ', du ' + dir(p.pass.az0) + ' au ' + dir(p.pass.az1) + ', ' + Math.round(p.pass.max) + '°'
+        : hm(p.first) + ' → ' + hm(p.last) + ', au plus haut à ' + hm(p.best.m) + ' (' + dir(p.best.az) + ', ' + Math.round(p.best.alt) + '°)';
+      d.append(el('b', '', p.name), ' ' + when + (i ? '' : ' : ' + (p.kind === 'iss' ? 'un point brillant qui file sans clignoter' : p.name === 'Lune' ? moonText(p.best.m) : CI_LOOK[p.name][1]) + '.'));
+      const go = () => { goT(p.best.m); look(p.best.alt, p.best.az); show(p.kind, p.name); };
+      d.onclick = go; d.onkeydown = e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); go(); } };
+      box.append(d);
+    });
     if (!list.length) box.append(el('div', '', 'Aucune planète bien visible cette nuit.'));
   }
   function renderIss() {
     const box = $('ciIss');
     if (!iss) { box.replaceChildren(el('div', 'hint', 'Orbite de l’ISS indisponible (hors ligne ?).')); return; }
-    box.replaceChildren(...(passes.length ? passes.slice(0, 6).map(p => { const d = el('div'); d.append(el('b', '', dayOf(p.start).replace(/^\w/, c => c.toUpperCase()) + ' à ' + hm(p.start) + ' '), 'apparaît au ' + dir(p.az0) + ', monte à ' + Math.round(p.max) + '°, disparaît au ' + dir(p.az1) + ' vers ' + hm(p.end) + (p.max > 50 ? ' : très beau passage.' : '.')); return d; })
-      : [el('div', '', 'Pas de passage visible les trois prochaines nuits.')]), el('div', 'hint', 'Un point très brillant qui file sans clignoter, en quelques minutes. Horaires à quelques minutes près.'));
+    box.replaceChildren(...(passes.length ? passes.slice(0, 4).map(p => { const d = el('div'); d.append(el('b', '', new Date(p.start).toLocaleDateString('fr-FR', { weekday: 'short', day: 'numeric' }) + ' ' + hm(p.start) + ' '), dir(p.az0) + ' → ' + dir(p.az1) + ', ' + Math.round(p.max) + '°' + (p.max > 50 ? ' · très beau' : '')); return d; })
+      : [el('div', '', 'Pas de passage visible les trois prochaines nuits.')]), el('div', 'hint', 'Horaires à quelques minutes près.'));
   }
   // les passages visibles des 3 prochains jours : l'ISS à plus de 10°, au soleil, et toi dans la nuit
   function findPasses(T, from = Date.now()) {
@@ -456,7 +516,7 @@ export default async function (ctx) {
     try { const r = await ctx.net('https://celestrak.org/NORAD/elements/gp.php?CATNR=25544&FORMAT=TLE'); const L = r.body.split(/\r?\n/).filter(Boolean);
       if (!r.ok || L.length < 3) throw 0; iss = tle(L[1], L[2]); await folder.write('iss', { l1: L[1], l2: L[2] }).catch(() => {}); }
     catch { const d = await doc('iss'); if (d?.l1) iss = tle(d.l1, d.l2); }  // hors ligne : la dernière orbite connue (bonne quelques jours)
-    if (iss) passes = findPasses(iss); renderIss();
+    if (iss) passes = findPasses(iss); renderIss(); renderList();
   }
   // la vue « comme dehors » : un panorama vers une direction (vaz au centre), l'horizon en bas, K pixels par degré ; on tourne et on lève les yeux
   const K = 3.2, GROUND = 22, VMAX = 90 - (H - GROUND) / K;
@@ -541,6 +601,46 @@ export default async function (ctx) {
       const a = altAz(l[i - 1][0], l[i - 1][1], t, lat, lon), b = altAz(l[i][0], l[i][1], t, lat, lon); if (a.alt < 0 || b.alt < 0) continue;
       const p = proj(a.alt, a.az), q = proj(b.alt, b.az); if (p && q && Math.abs(p[0] - q[0]) < W / 2) segs.push([p, q]); }
   }
+  // la fiche : ce qu'est l'objet et où il est à l'heure choisie ; sel est gardé pour l'encadrer dans la vue
+  let sel = null;
+  const posOf = (kind, name) => { if (kind === 'iss') return iss && issLook(iss, t, lat, lon); if (kind === 'body') { const o = bodies(t)[name]; return altAz(o.ra, o.dec, t, lat, lon); }
+    const s = (kind === 'star' ? CI_STARS : CI_CONST).find(q => q.name === name); return s && altAz(s.ra, s.dec, t, lat, lon); };
+  const whereNow = p => 'À ' + hm(t) + ' : ' + (!p ? 'position inconnue.' : p.alt < 0 ? 'sous l’horizon.' : Math.round(p.alt) + '° au-dessus de l’horizon, vers le ' + dir(p.az) + '.');
+  function show(kind, name) {
+    sel = [kind, name]; const p = posOf(kind, name), lines = [];
+    if (kind === 'body') {
+      lines.push(name === 'Lune' ? 'La Lune, ' + moonText(t) + '. La partie sombre, à peine visible, est éclairée par la Terre (la lumière cendrée).' : 'Planète : ' + CI_LOOK[name][1] + '.');
+      const q = planetsTonight().find(q => q.name === name); lines.push(q ? 'Cette nuit : de ' + hm(q.first) + ' à ' + hm(q.last) + ', au plus haut à ' + hm(q.best.m) + '.' : 'Pas bien visible cette nuit.');
+    } else if (kind === 'iss') {
+      lines.push('La Station spatiale internationale : sept astronautes à 400 km au-dessus de nous, qui font le tour de la Terre en 92 minutes.');
+      const q = passes.find(q => q.end > t); if (q) lines.push('Prochain passage : ' + dayOf(q.start) + ' à ' + hm(q.start) + ', jusqu’à ' + Math.round(q.max) + '°.');
+    } else if (kind === 'star') {
+      const s = CI_STARS.find(q => q.name === name), c = constOf(name);
+      if (CI_FACT[name]) lines.push(CI_FACT[name]);
+      lines.push('Étoile ' + (c ? 'de la constellation ' + c.name : 'brillante') + ', ' + (s.mag < .5 ? 'parmi les plus brillantes du ciel' : s.mag < 1.5 ? 'très brillante' : s.mag < 2.5 ? 'brillante' : 'bien visible') + ' (magnitude ' + s.mag.toFixed(1).replace('.', ',') + ').');
+    } else {
+      const c = CI_CONST.find(q => q.name === name); lines.push(c.text); if (c.stars.length) lines.push('Étoiles : ' + c.stars.join(', ') + '.');
+    }
+    lines.push(whereNow(p));
+    $('ciInfoT').textContent = name.toUpperCase(); $('ciInfoB').replaceChildren(...lines.map(l => el('div', '', l))); $('ciInfo').hidden = false;
+  }
+  const skyAt = (x, y) => {  // le point du ciel sous (x, y) de la vue, en ascension droite et déclinaison
+    const alt = (HY() - y) / K, az = vaz + (x - W / 2) / K, f = lat * RAD, a = alt * RAD, A = az * RAD;
+    const dec = Math.asin(clamp(Math.sin(f) * Math.sin(a) + Math.cos(f) * Math.cos(a) * Math.cos(A), -1, 1)) * DEG;
+    const ha = Math.atan2(-Math.sin(A) * Math.cos(a), Math.cos(f) * Math.sin(a) - Math.sin(f) * Math.cos(a) * Math.cos(A)) * DEG;
+    return { alt, ra: rev(gmst(t) + lon - ha), dec };
+  };
+  function pick(x, y) {  // l'astre le plus proche du clic (à 8 pixels de la vue au plus), sinon la constellation dont le centre est le plus proche
+    let best = null, bd = 8;
+    const cand = (kind, name, p) => { const q = p && p.alt > -1 && proj(p.alt, p.az); if (!q) return; const d = Math.hypot(q[0] - x, q[1] - y); if (d < bd) { bd = d; best = [kind, name]; } };
+    for (const n of ['Lune', ...Object.keys(CI_ORB)]) cand('body', n, posOf('body', n));
+    if (iss) cand('iss', 'ISS', posOf('iss'));
+    for (const s of CI_STARS) cand('star', s.name, altAz(s.ra, s.dec, t, lat, lon));
+    if (!best) { const s = skyAt(x, y); if (s.alt > 0) { let cd = 16; for (const c of CI_CONST) { const d = angDist(s.ra, s.dec, c.ra, c.dec); if (d < cd) { cd = d; best = ['const', c.name]; } } } }
+    if (best) show(...best);
+    return best;
+  }
+  const look = (alt, az) => { vaz = Math.round(az / 5) * 5; valt = clamp(alt * K > H - GROUND - 24 ? alt - 30 : 0, 0, VMAX); };
   function aim() {  // regarder d'abord vers ce qu'il y a de plus beau : la Lune, puis la planète la plus brillante, sinon le sud
     const B = bodies(t); for (const n of ['Lune', 'Vénus', 'Jupiter', 'Saturne', 'Mars']) { const p = altAz(B[n].ra, B[n].dec, t, lat, lon); if (p.alt > 8 && p.alt < 45) { vaz = Math.round(p.az / 5) * 5; return; } }
     vaz = 180;
@@ -574,6 +674,8 @@ export default async function (ctx) {
       if (name === 'Saturne') { px(g, c + 'aa', x - 2, y + 1, 1, 1); px(g, c + 'aa', x + 3, y, 1, 1); }
       PXK.fill(g, name, x + 5, y + 4, c, 1); shown.push(name); }
     if (iss) { const p = issLook(iss, t, lat, lon), q = p.alt > 0 && proj(p.alt, p.az); if (q) { const [x, y] = q.map(Math.round); if (tick % 30 < 22) { const c = p.lit ? '#ffffff' : '#5a6a9a'; px(g, c, x - 1, y, 3, 1); px(g, c, x, y - 1, 1, 3); } PXK.fill(g, 'ISS', x + 4, y + 4, '#d8e0ff', 1); shown.push('ISS'); } }
+    if (sel) { const p = posOf(...sel), q = p && p.alt > -1 && proj(p.alt, p.az); if (q) { const [x, y] = q.map(Math.round), c = tick % 40 < 28 ? '#ffd84a' : 'rgba(255,216,74,.5)';
+      if (sel[0] === 'const') PXK.fill(g, sel[1], x, y, c, 1, 'center'); else for (const [sx, sy] of [[-1, -1], [1, -1], [-1, 1], [1, 1]]) { const cx = x + sx * 7, cy = y + sy * 7; px(g, c, sx < 0 ? cx : cx - 2, cy, 3, 1); px(g, c, cx, sy < 0 ? cy : cy - 2, 1, 3); } } }
     g.drawImage(groundCv, 0, 0);
     PXK.fill(g, hm(t), 6, 11, '#ffffff', 1); PXK.fill(g, sa > -.8 ? 'jour' : sa > -15 ? (new Date(t).getHours() < 12 ? 'aube' : 'crépuscule') : 'nuit noire', 6, 22, '#b8c8ff', 1);
     PXK.fill(g, 'vers le ' + dir(vaz), W - 6, 11, '#ffffff', 1, 'right');
@@ -584,7 +686,9 @@ export default async function (ctx) {
     const turn = (da, dl = 0) => { vaz = rev(vaz + da); valt = clamp(valt + dl, 0, VMAX); };
     cv.onpointerdown = e => { drag = [e.clientX, e.clientY, vaz, valt]; try { cv.setPointerCapture(e.pointerId); } catch {} };
     cv.onpointermove = e => { if (!drag) return; const s = cv.getBoundingClientRect().width / W; vaz = rev(drag[2] - (e.clientX - drag[0]) / s / K); valt = clamp(drag[3] + (e.clientY - drag[1]) / s / K, 0, VMAX); };
-    cv.onpointerup = cv.onpointercancel = () => { drag = null; };
+    cv.onpointerup = e => { if (drag && Math.hypot(e.clientX - drag[0], e.clientY - drag[1]) < 5) { vaz = drag[2]; valt = drag[3]; const r = cv.getBoundingClientRect(); pick((e.clientX - r.left) / r.width * W, (e.clientY - r.top) / r.height * H); } drag = null; };
+    cv.onpointercancel = () => { drag = null; };
+    $('ciInfoX').onclick = () => { sel = null; $('ciInfo').hidden = true; };
     document.addEventListener('keydown', e => { if (!on() || /^(INPUT|SELECT|TEXTAREA)$/.test(e.target?.tagName)) return;
       const m = { ArrowLeft: [-15], ArrowRight: [15], ArrowUp: [0, 10], ArrowDown: [0, -10] }[e.key]; if (!m) return; e.preventDefault(); turn(...m); });
     $('ciLeft').onclick = () => turn(-45); $('ciRight').onclick = () => turn(45);
@@ -592,7 +696,8 @@ export default async function (ctx) {
   }
   const slider = $('ciT');
   const setT = v => { t = win[0] + (win[1] - win[0]) * v / 1000; };
-  slider.oninput = e => setT(+e.target.value);
+  slider.oninput = e => { setT(+e.target.value); if (sel) show(...sel); };
+  const goT = ms => { t = Math.max(win[0], Math.min(win[1], ms)); slider.value = Math.round((t - win[0]) / (win[1] - win[0]) * 1000); };
   $('ciNow').onclick = () => { win = night(); t = Date.now() < win[0] ? win[0] + 3600000 : Date.now();  /* le jour : une heure après le coucher, quand il fait noir */ slider.value = Math.max(0, Math.min(1000, Math.round((t - win[0]) / (win[1] - win[0]) * 1000))); };
   $('ciCity').onclick = async () => {  // la ville : cherchée chez Open-Meteo (le même service que la Météo de NeoDex)
     const q = await host.ask('Ta ville (pour calculer ton ciel) :', city); if (!q) return;
@@ -614,10 +719,15 @@ export default async function (ctx) {
     const p0 = altAz(0, 90, Date.now(), 48, 2); near(p0.alt, 48, .01, 'hauteur du pôle');
     { const [l, b] = galactic(266.405, -28.936); if (Math.abs(l) > .3 || Math.abs(b) > .3) bad.push('centre de la Galaxie en ' + l.toFixed(1) + ', ' + b.toFixed(1)); }
     if (STARS.length !== 4086 || Math.abs(STARS[0].mag + 1.46) > .1) bad.push('catalogue : ' + STARS.length + ' étoiles, la plus brillante ' + STARS[0]?.mag);
+    { const miss = CI_STARS.filter(s => !constOf(s.name)).map(s => s.name); if (miss.length) bad.push('étoiles sans constellation : ' + miss.join(', ')); }
+    { const s = CI_STARS[2], p0 = altAz(s.ra, s.dec, t, lat, lon), v0 = [vaz, valt]; vaz = p0.az; valt = clamp(p0.alt - 20, 0, VMAX); const q = proj(p0.alt, p0.az), k = skyAt(q[0], q[1]); [vaz, valt] = v0;
+      if (p0.alt > 2 && angDist(k.ra, k.dec, s.ra, s.dec) > .5) bad.push('clic décalé de ' + angDist(k.ra, k.dec, s.ra, s.dec).toFixed(1) + '°'); }
     console.assert(!bad.length, 'ciel', bad); view.dataset.selfcheck = bad.join(' | ') || 'ok';
   }
   $('ciNow').click(); aim(); renderList(); loadIss();
   let raf = 0; const frame = () => { if (!on()) { raf = 0; return; } raf = requestAnimationFrame(frame); draw(); };
   ctx.onOpen(() => { g ??= $('ciCanvas').getContext('2d'); if (Date.now() > win[1]) { $('ciNow').click(); renderList(); } if (!raf) raf = requestAnimationFrame(frame); });
   $('ciCanvas').__state = () => ({ iss: !!iss, passes: passes.length, planets: $('ciPlanets').children.length });
+  $('ciCanvas').__at = (kind, name) => { const p = posOf(kind, name), q = p && p.alt > 0 && proj(p.alt, p.az); if (!q || q[0] < 4 || q[0] > W - 4 || q[1] < 4 || q[1] > H - GROUND) return null; const r = $('ciCanvas').getBoundingClientRect(); return [r.left + q[0] / W * r.width, r.top + q[1] / H * r.height]; };
+  $('ciCanvas').__consts = () => CI_CONST.map(c => c.name);
 }

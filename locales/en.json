@@ -14,7 +14,6 @@
  " à ": " at ",
  "aucun astre dans cette direction": "nothing in this direction",
  "Soleil": "Sun",
- "Le ciel comme si tu sortais : fais glisser la vue (ou ◀ ▶ et les flèches du clavier) pour tourner et lever les yeux. Le curseur avance l'heure dans la nuit ; le bouton VILLE choisit d'où tu regardes.": "The sky as if you stepped outside: drag the view (or ◀ ▶ and the arrow keys) to turn and look up. The slider moves through the night; the CITY button chooses where you look from.",
  "VILLE": "CITY",
  "Ta ville (pour calculer ton ciel) :": "Your city (to compute your sky):",
  "Recherche impossible (hors ligne ?).": "Search failed (offline?).",
@@ -56,7 +55,6 @@
  "nuit noire": "dark night",
  "rien de levé": "nothing up",
  "Ce plugin doit être approuvé par NeoDex pour s'ouvrir.": "This plugin must be approved by NeoDex to open.",
- "Les planètes visibles cette nuit depuis ta ville, avec l'heure où elles sont au plus haut et leur direction ; la carte du ciel heure par heure en pixel art (étoiles brillantes, constellations, Lune et sa phase) ; et les prochains passages visibles de la Station spatiale internationale. Calculé sur ton PC, seule l'orbite de l'ISS vient d'Internet (CelesTrak).": "The planets visible tonight from your town, with when they are highest and their direction; an hour-by-hour pixel art sky map (bright stars, constellations, the Moon and its phase); and the next visible passes of the International Space Station. Computed on your PC, only the ISS orbit comes from the Internet (CelesTrak).",
  "Ta ville suit ton compte.": "Your town follows your account.",
  "bas sur l’horizon, juste après le coucher ou avant le lever du soleil": "low on the horizon, just after sunset or before sunrise",
  "l’astre le plus brillant après la Lune": "the brightest object after the Moon",
@@ -143,5 +141,11 @@
  "orbite de l’ISS pas chargée": "ISS orbit not loaded",
  "liste de la nuit vide": "night list empty",
  "la vue n’a pas tourné :": "the view did not turn:",
- "passage(s) de l’ISS ·": "ISS pass(es) ·"
+ "passage(s) de l’ISS ·": "ISS pass(es) ·",
+ "Fais glisser la vue (ou ◀ ▶ et les flèches) pour tourner et lever les yeux, le curseur pour avancer dans la nuit. Clique sur un astre, une étoile ou une constellation pour sa fiche.": "Drag the view (or ◀ ▶ and the arrow keys) to turn and look up, the slider to move through the night. Click a planet, a star or a constellation for its card.",
+ "FERMER": "CLOSE",
+ "Fermer la fiche": "Close the card",
+ "À VOIR EN PREMIER": "SEE THIS FIRST",
+ "Horaires à quelques minutes près.": "Times accurate to a few minutes.",
+ "Les planètes visibles cette nuit depuis ta ville, avec l'heure où elles sont au plus haut et leur direction ; la carte du ciel heure par heure en pixel art (étoiles brillantes, constellations, Lune et sa phase) ; et les prochains passages visibles de la Station spatiale internationale. Calculé sur ton PC, seule l'orbite de l'ISS vient d'Internet (CelesTrak). Clique sur une planète, une étoile ou une constellation pour ouvrir sa fiche ; la colonne de droite est résumée, avec le plus beau à voir ce soir en premier.": "The planets visible tonight from your town, with when they are highest and their direction; an hour-by-hour pixel art sky map (bright stars, constellations, the Moon and its phase); and the next visible passes of the International Space Station. Computed on your PC, only the ISS orbit comes from the Internet (CelesTrak). Click a planet, a star or a constellation to open its card; the right column is shorter, with the best thing to see tonight first."
 }
