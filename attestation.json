@@ -1,9 +1,9 @@
 {
   "pluginId": "neodex.ciel",
   "repo": "NDesumeur/neodex-plugin-ciel",
-  "version": "1.1.0",
-  "sha256": "c1b70844f39b369731f1a7c5acfd6b4cc37c5f435e9f6c7e2202aba02a24a924",
-  "approvedAt": "2026-11-16T04:14:34.802Z",
+  "version": "1.2.0",
+  "sha256": "b08c32a63db086813e042e4206ea2d18cd8be91ae3c4493ca22b7a12fe1f40b4",
+  "approvedAt": "2026-11-24T15:56:20.666Z",
   "neobase": ">=4.0.0",
-  "signature": "6b+8IkTTwdryTo4/YRbglyJHZiWnt8WciAsl36L2NkegS+kP5KldXUmf6sKN3JXASuCjZFcvYUlCvqeQ7bCADg=="
+  "signature": "cCTOLX+Ix/zRdwp0THs+ftaXBu+S9ubbKpsnVKSWCEbetW3ixcR9S+b4pjcNoZXZjhX0X8pfHl87gZxKGYilAw=="
 }
