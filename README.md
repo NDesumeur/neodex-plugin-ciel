@@ -4,6 +4,10 @@ Ce qu’il y a à voir dans le ciel cette nuit, depuis ta ville.
 
 *English version: [README.en.md](README.en.md)*
 
+## Alertes de l'ISS (nouveau en 1.2.0)
+
+Coche ME PRÉVENIR dans la carte des passages : une notification arrive avant chaque passage de la station spatiale (5 à 30 min avant, tous ou seulement les beaux), même Ciel fermé.
+
 ## Ce qu’il montre
 
 - **Cette nuit** : l’heure du coucher et du lever du soleil, puis chaque planète visible (Mercure, Vénus, Mars, Jupiter, Saturne) et la Lune : de quelle heure à quelle heure, quand elle est au plus haut, à quelle hauteur et dans quelle direction.
@@ -24,7 +28,7 @@ Les étoiles et le tracé des constellations viennent de **d3-celestial** d’Ol
 
 ## Autorisations
 
-- **Données** : ta ville et la dernière orbite de l’ISS. **celestrak.org** : télécharger cette orbite. **geocoding-api.open-meteo.com** : trouver ta ville sur la carte.
+- **Données** : ta ville et la dernière orbite de l’ISS. **celestrak.org** : télécharger cette orbite. **geocoding-api.open-meteo.com** : trouver ta ville sur la carte. **Notifications** et **tâches de fond** : les alertes de passage de l’ISS, même Ciel fermé.
 
 ## Installer
 
@@ -35,3 +39,13 @@ Dans NeoDex : **NeoStore → À découvrir → Ciel ce soir → Installer**.
 Un clic sur une planète, la Lune, l’ISS, une étoile brillante ou une constellation (26 ont une fiche) ouvre sa fiche : ce que c’est, ce qu’on y voit, et où elle est à l’heure choisie. L’objet est encadré dans la vue.
 
 La colonne « Cette nuit » met en premier le plus beau à voir (la Lune, une planète brillante, un beau passage de l’ISS), avec une ligne courte par astre. Un clic sur une ligne avance l’heure et tourne la vue vers l’astre.
+
+## Alertes de passage de l’ISS (1.2.0)
+
+La station spatiale est le spectacle le plus facile à voir : un point très brillant qui traverse le ciel en quelques minutes, sans clignoter. Dans la carte **PASSAGES DE L’ISS** :
+
+- coche **ME PRÉVENIR** : une notification arrive **5, 10, 15 ou 30 min avant** chaque passage, avec l’heure, la direction où elle apparaît, celle où elle file, et sa hauteur ;
+- choisis **tous les passages**, **les beaux** (plus de 30° de hauteur) ou **les très beaux** (plus de 50°) ;
+- **ESSAYER** envoie tout de suite une notification d’essai.
+
+L’alerte marche même Ciel fermé, tant que NeoDex est ouvert (autorisation **tâches de fond**). Un passage ne prévient qu’une fois, et pas si le PC se réveille après son début. L’orbite est relue deux fois par jour au plus chez CelesTrak ; les passages marqués « alerte » dans la liste sont ceux qui préviendront.

@@ -1,16 +1,19 @@
 {
   "id": "neodex.ciel",
   "name": "Ciel ce soir",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "author": "NDesumeur",
-  "description": "Les planètes visibles cette nuit depuis ta ville, avec l'heure où elles sont au plus haut et leur direction ; la carte du ciel heure par heure en pixel art (étoiles brillantes, constellations, Lune et sa phase) ; et les prochains passages visibles de la Station spatiale internationale. Calculé sur ton PC, seule l'orbite de l'ISS vient d'Internet (CelesTrak). Clique sur une planète, une étoile ou une constellation pour ouvrir sa fiche ; la colonne de droite est résumée, avec le plus beau à voir ce soir en premier.",
+  "description": "Les planètes visibles cette nuit depuis ta ville, avec l'heure où elles sont au plus haut et leur direction ; la carte du ciel heure par heure en pixel art (étoiles brillantes, constellations, Lune et sa phase) ; et les prochains passages visibles de la Station spatiale internationale, avec une alerte quelques minutes avant, même Ciel fermé. Calculé sur ton PC, seule l'orbite de l'ISS vient d'Internet (CelesTrak). Clique sur une planète, une étoile ou une constellation pour ouvrir sa fiche ; la colonne de droite est résumée, avec le plus beau à voir ce soir en premier.",
   "icon": "icon.png",
   "entry": "index.js",
   "view": "ciel",
   "neobase": ">=4.0.0",
   "type": "app",
   "category": "Outils",
-  "compatibility": ["windows", "linux"],
+  "compatibility": [
+    "windows",
+    "linux"
+  ],
   "syncMode": "fusion",
   "syncInfo": "Ta ville suit ton compte.",
   "mobile": false,
@@ -20,6 +23,8 @@
   "permissions": [
     "storage",
     "network:celestrak.org",
-    "network:geocoding-api.open-meteo.com"
+    "network:geocoding-api.open-meteo.com",
+    "notifications",
+    "background"
   ]
 }

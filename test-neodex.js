@@ -1,5 +1,5 @@
 // lancé par le test « local » de NeoDex : vérification interne (dates connues, Galaxie, catalogue), la liste de la nuit, l'orbite de l'ISS, la vue qui suit l'heure et qui tourne
-module.exports = async ({ pj, sleep }) => {
+module.exports = async ({ pj, sleep, shot }) => {
   const sc = await pj(`document.querySelector('[data-selfcheck]')?.dataset.selfcheck`); if (sc !== 'ok') throw new Error('vérification interne : ' + sc);
   let s; for (let i = 0; i < 20; i++) { await sleep(500); s = await pj(`document.getElementById('ciCanvas').__state()`); if (s.iss) break; }
   if (!s.iss) throw new Error('orbite de l’ISS pas chargée');
@@ -24,6 +24,16 @@ module.exports = async ({ pj, sleep }) => {
     if (got) break;
   }
   if (!got) throw new Error('aucune constellation trouvée au clic');
+  // les alertes de l'ISS : un passage inventé dans 8 min ; prévenu une seule fois, pas trop tôt, et seulement pour les passages choisis
+  const T0 = Date.now(), fake = [{ start: T0 + 8 * 60000, end: T0 + 14 * 60000, az0: 225, az1: 45, max: 62 }, { start: T0 + 9 * 60000, end: T0 + 12 * 60000, az0: 270, az1: 0, max: 18 }];
+  await pj(`document.getElementById('ciCanvas').__alertSet({ on: true, lead: 5, min: 30 })`);
+  const early = await pj(`document.getElementById('ciCanvas').__alerts(${T0}, ${JSON.stringify(fake)})`);
+  const due = await pj(`document.getElementById('ciCanvas').__alerts(${T0 + 4 * 60000}, ${JSON.stringify(fake)})`);
+  const again = await pj(`document.getElementById('ciCanvas').__alerts(${T0 + 5 * 60000}, ${JSON.stringify(fake)})`);
+  if (early.n !== 0 || due.n !== 1 || again.n !== 0 || !/dans 4 min/.test(due.got[0]?.title) || !/sud-ouest.*nord-est.*62°.*6 min/.test(due.got[0]?.body)) throw new Error('alertes ISS : ' + JSON.stringify({ early, due, again }));
+  const hint = await pj(`document.getElementById('ciAlHint').textContent`);
+  await pj(`document.getElementById('ciAlOn').closest('.sysCard').scrollIntoView({ block: 'center' }), 0`); await sleep(300); if (shot) await shot('iss');
+  await pj(`document.getElementById('ciCanvas').__alertSet({ on: false, lead: 10, min: 10 })`);  // le profil de test reste comme avant
   await sleep(900);
-  return s.passes + ' passage(s) de l’ISS · ' + dusk + ' · ' + l + ' · en premier : ' + top[0] + ' · fiche : ' + got;
+  return s.passes + ' passage(s) de l’ISS · ' + dusk + ' · ' + l + ' · en premier : ' + top[0] + ' · fiche : ' + got + ' · alerte ISS : « ' + due.got[0].title + ' » (une fois, pas trop tôt, pas pour un passage bas) · ' + hint;
 };

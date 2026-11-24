@@ -8,7 +8,12 @@ const HTML = `<div class="appWrap wide">
     <div class="gSide">
       <div class="sysCard ciInfo" id="ciInfo" hidden><b id="ciInfoT"></b><div class="ciList" id="ciInfoB"></div><button class="btn" id="ciInfoX" aria-label="Fermer la fiche">FERMER</button></div>
       <div class="sysCard"><b>CETTE NUIT</b><div class="ciList" id="ciPlanets"></div></div>
-      <div class="sysCard"><b>PASSAGES DE L'ISS</b><div class="ciList" id="ciIss"></div></div>
+      <div class="sysCard"><b>PASSAGES DE L'ISS</b><div class="ciList" id="ciIss"></div>
+        <div class="row ciAlert"><label class="ciChk"><input type="checkbox" id="ciAlOn"> ME PRÉVENIR</label>
+          <select class="gSel" id="ciAlLead" aria-label="Combien de temps avant"><option value="5">5 min avant</option><option value="10">10 min avant</option><option value="15">15 min avant</option><option value="30">30 min avant</option></select>
+          <select class="gSel" id="ciAlMin" aria-label="Quels passages"><option value="10">tous les passages</option><option value="30">les beaux (plus de 30°)</option><option value="50">les très beaux (plus de 50°)</option></select>
+          <button class="btn" id="ciAlTry">ESSAYER</button></div>
+        <div class="hint" id="ciAlHint"></div></div>
       <div class="hint">Fais glisser la vue (ou ◀ ▶ et les flèches) pour tourner et lever les yeux, le curseur pour avancer dans la nuit. Clique sur un astre, une étoile ou une constellation pour sa fiche.</div>
     </div></div>
 </div>`;
@@ -23,6 +28,7 @@ const CSS = `.gMain{display:flex;gap:22px;align-items:flex-start;flex-wrap:wrap}
 .ciList b{color:var(--acc,#ffd84a)}
 .ciInfo[hidden]{display:none}.ciInfo{box-shadow:0 0 0 2px #ffd84a}.ciInfo .btn{align-self:flex-end}
 .ciItem{cursor:pointer;padding:3px 6px;margin:0 -6px}.ciItem:hover,.ciItem:focus-visible{background:rgba(138,176,255,.14);outline:none}
+.ciAlert{margin-top:6px}.ciChk{display:flex;gap:6px;align-items:center;cursor:var(--cp,pointer)}.ciChk input{width:18px;height:18px;accent-color:#8ab0ff}
 .ciItem.top{background:rgba(255,216,74,.1);box-shadow:inset 3px 0 0 #ffd84a;padding:6px 8px}.ciTop{color:#ffd84a;font-size:.85em;letter-spacing:1px}`;
 const RAD = Math.PI / 180, DEG = 180 / Math.PI;
 const rev = x => ((x % 360) + 360) % 360;
@@ -500,7 +506,7 @@ export default async function (ctx) {
   function renderIss() {
     const box = $('ciIss');
     if (!iss) { box.replaceChildren(el('div', 'hint', 'Orbite de l’ISS indisponible (hors ligne ?).')); return; }
-    box.replaceChildren(...(passes.length ? passes.slice(0, 4).map(p => { const d = el('div'); d.append(el('b', '', new Date(p.start).toLocaleDateString('fr-FR', { weekday: 'short', day: 'numeric' }) + ' ' + hm(p.start) + ' '), dir(p.az0) + ' → ' + dir(p.az1) + ', ' + Math.round(p.max) + '°' + (p.max > 50 ? ' · très beau' : '')); return d; })
+    box.replaceChildren(...(passes.length ? passes.filter(p => p.end > Date.now()).slice(0, 4).map(p => { const d = el('div'); d.append(el('b', '', new Date(p.start).toLocaleDateString('fr-FR', { weekday: 'short', day: 'numeric' }) + ' ' + hm(p.start) + ' '), dir(p.az0) + ' → ' + dir(p.az1) + ', ' + Math.round(p.max) + '°' + (p.max > 50 ? ' · très beau' : '') + (alert.on && p.max >= alert.min ? ' · alerte' : '')); return d; })
       : [el('div', '', 'Pas de passage visible les trois prochaines nuits.')]), el('div', 'hint', 'Horaires à quelques minutes près.'));
   }
   // les passages visibles des 3 prochains jours : l'ISS à plus de 10°, au soleil, et toi dans la nuit
@@ -512,7 +518,35 @@ export default async function (ctx) {
     }
     if (cur) out.push(cur); return out;
   }
+  // --- les alertes : une notification avant chaque passage choisi, même Ciel fermé (tâche de fond chaque minute) ---
+  const alert = { on: false, lead: 10, min: 10, ...(await doc('alertes')) };
+  let sent = (await doc('local-iss-envoye'))?.sent || [], issAt = 0, passesAt = 0, bgOn = false;  // local- : pas synchronisé (chaque PC prévient de son côté)
+  const issMsg = (p, now) => { const mins = Math.max(0, Math.round((p.start - now) / 60000));
+    return { title: mins ? 'L’ISS passe dans ' + mins + ' min' : 'L’ISS passe maintenant',
+      body: 'À ' + hm(p.start) + ', elle apparaît au ' + dir(p.az0) + ' et file vers le ' + dir(p.az1) + ', jusqu’à ' + Math.round(p.max) + '° de hauteur, pendant ' + Math.max(1, Math.round((p.end - p.start) / 60000)) + ' min. Un point brillant qui ne clignote pas.',
+      open: 'plugin:neodex.ciel' }; };
+  // un passage prévient une seule fois, dans la fenêtre « lead minutes avant » → « 1 min après le début » (un PC qui se réveille trop tard ne prévient pas pour rien)
+  async function issAlerts(now = Date.now(), list = passes, send = m => ctx.notifications?.send(m)) {
+    if (!alert.on) return 0;
+    let n = 0;
+    for (const p of list) {
+      const key = String(Math.round(p.start / 60000));
+      if (p.max < alert.min || sent.includes(key) || now < p.start - alert.lead * 60000 || now > p.start + 60000) continue;
+      sent = [...sent, key].slice(-30); folder.write('local-iss-envoye', { sent }).catch(() => {});
+      await Promise.resolve(send(issMsg(p, now))).catch(() => {}); n++;
+    }
+    return n;
+  }
+  async function bgTick() {  // chaque minute : l'orbite relue deux fois par jour au plus, les passages recalculés toutes les 6 h
+    const now = Date.now();
+    if (alert.on && now - issAt > 12 * 3600000) await loadIss();
+    else if (iss && now - passesAt > 6 * 3600000) { passes = findPasses(iss); passesAt = now; renderIss(); }
+    await issAlerts(now);
+  }
+  const alertHint = () => { $('ciAlHint').textContent = !alert.on ? 'Coche « me prévenir » pour une notification avant chaque passage, même Ciel fermé.' : bgOn ? 'Une notification ' + alert.lead + ' min avant ' + (alert.min > 10 ? 'chaque beau passage' : 'chaque passage') + ', même Ciel fermé (NeoDex ouvert).' : 'Sans l’autorisation « tâches de fond », l’alerte ne marche que tant que Ciel est ouvert.'; };
+  async function startBg() { if (!bgOn) bgOn = !!(await ctx.background?.every(1, bgTick).catch(() => false)); alertHint(); }
   async function loadIss() {
+    issAt = passesAt = Date.now();
     try { const r = await ctx.net('https://celestrak.org/NORAD/elements/gp.php?CATNR=25544&FORMAT=TLE'); const L = r.body.split(/\r?\n/).filter(Boolean);
       if (!r.ok || L.length < 3) throw 0; iss = tle(L[1], L[2]); await folder.write('iss', { l1: L[1], l2: L[2] }).catch(() => {}); }
     catch { const d = await doc('iss'); if (d?.l1) iss = tle(d.l1, d.l2); }  // hors ligne : la dernière orbite connue (bonne quelques jours)
@@ -725,8 +759,19 @@ export default async function (ctx) {
     console.assert(!bad.length, 'ciel', bad); view.dataset.selfcheck = bad.join(' | ') || 'ok';
   }
   $('ciNow').click(); aim(); renderList(); loadIss();
+  $('ciAlOn').checked = alert.on; $('ciAlLead').value = String(alert.lead); $('ciAlMin').value = String(alert.min);
+  const saveAlert = () => { folder.write('alertes', alert).catch(e => toast('Pas enregistré : ' + e.message, true)); renderIss(); alertHint(); };
+  $('ciAlOn').onchange = async () => { alert.on = $('ciAlOn').checked; saveAlert(); if (alert.on) await startBg(); };
+  $('ciAlLead').onchange = () => { alert.lead = +$('ciAlLead').value; saveAlert(); };
+  $('ciAlMin').onchange = () => { alert.min = +$('ciAlMin').value; saveAlert(); };
+  $('ciAlTry').onclick = () => { const p = passes.find(q => q.end > Date.now() && q.max >= alert.min) || { start: Date.now() + alert.lead * 60000, end: Date.now() + (alert.lead + 5) * 60000, az0: 225, az1: 45, max: 62 };
+    const m = issMsg(p, p.start - alert.lead * 60000); ctx.notifications?.send({ ...m, title: m.title + ' (essai)' }).then(() => toast('Notification envoyée.'), e => toast('Notification impossible : ' + e.message, true)); };
+  alertHint(); if (alert.on) startBg();
+  setInterval(() => { if (!bgOn) issAlerts(); }, 60000);  // sans tâche de fond : tant que Ciel est chargé
   let raf = 0; const frame = () => { if (!on()) { raf = 0; return; } raf = requestAnimationFrame(frame); draw(); };
   ctx.onOpen(() => { g ??= $('ciCanvas').getContext('2d'); if (Date.now() > win[1]) { $('ciNow').click(); renderList(); } if (!raf) raf = requestAnimationFrame(frame); });
+  $('ciCanvas').__alerts = (at, list) => { const got = []; return issAlerts(at, list, m => { got.push(m); }).then(n => ({ n, got })); };  // le test : des passages inventés, rien n'est envoyé
+  $('ciCanvas').__alertSet = o => { Object.assign(alert, o); sent = []; renderIss(); alertHint(); return alert; };
   $('ciCanvas').__state = () => ({ iss: !!iss, passes: passes.length, planets: $('ciPlanets').children.length });
   $('ciCanvas').__at = (kind, name) => { const p = posOf(kind, name), q = p && p.alt > 0 && proj(p.alt, p.az); if (!q || q[0] < 4 || q[0] > W - 4 || q[1] < 4 || q[1] > H - GROUND) return null; const r = $('ciCanvas').getBoundingClientRect(); return [r.left + q[0] / W * r.width, r.top + q[1] / H * r.height]; };
   $('ciCanvas').__consts = () => CI_CONST.map(c => c.name);
